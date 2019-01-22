@@ -14,11 +14,11 @@ Note that you can change the variables and information to be generated within he
 5. go to localhost:/(yourfilename.html)
 
 ## Technologies Used
-HTML
-CSS2
-Powershell script
-static-server
-npm
++ HTML
++ CSS2
++ Powershell script
++ static-server
++ npm
 
 
 ###
