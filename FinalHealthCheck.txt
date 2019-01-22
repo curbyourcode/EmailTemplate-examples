@@ -1,0 +1,65 @@
+$pwdfilepath = "D:\Krishna"
+$user = "khandk.adm@am.sony.com"
+$sender = "O365HealthCheck@sony.com"
+$smtpserver = "smtp.cul.am.sony.com"
+
+$ReportServices =@(
+"Angular",
+"React",
+"Ember",
+"Vue",
+"Asp. Net",
+"Java",
+"Orcale",
+"VS Code",
+"Slack"
+)
+
+
+$pwd = Get-Content "$pwdfilepath\pwdfile.txt" | Convertto-SecureString
+$creds = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $user, $pwd
+$O365Creds = (@{userName=$creds.username;password=$Creds.GetNetworkCredential().password;} | convertto-json).tostring()
+$Authtoken = (invoke-restmethod -contenttype "application/json" -method Post -uri "https://api.admin.microsoftonline.com/shdtenantcommunications.svc/Register" -body $O365Creds -ErrorAction Stop).RegistrationCookie
+$Authsession = (@{lastCookie=$Authtoken;locale="en-US";preferredEventTypes=@(0,1)} | convertto-json).tostring()
+$events = (invoke-restmethod -contenttype "application/json" -method Post -uri "https://api.admin.microsoftonline.com/shdtenantcommunications.svc/GetEvents" -body $Authsession)
+$events = (($events |? {$_.eventinfotype -eq 1}).events)
+
+foreach ($service in $ReportServices)
+{
+   $ReportEvents = $Events | ? {$_.affectedservicehealthstatus.servicename -eq $Service}
+   Foreach($ReportEvent in $ReportEvents)
+   {
+
+            if (($reportevent.status) -eq "Service degradation" -or ($reportevent.status) -like "*outage*" -or ($reportevent.status) -like "*Investigating*")
+            {
+                $recipient = @("krishna.khandelwal@am.sony.com","krishna.khandelwal@accenture.com")
+                $Importance = "High"
+                $line = "<br><br>"
+                $ThisBody += "<hr><br><br>"+"<b>$($ReportEvent.affectedservicehealthstatus.servicename) - $($reportevent.status) - $($reportevent.id)</b><br><br>"+($ReportEvent.messages | sort publishedtime -Descending | select -First 1).messagetext+"<br>"
+                $Body = $line+$ThisBody
+            }
+                
+   }
+
+}
+
+$a = Get-Date
+$b = $a.ToUniversalTime()
+$Subject = "Automated O365 Health notification - $b"
+            
+            $Body = $body.Replace("`n","<br>")  
+            $app = "<br><br><center><B>***Below message relates to Microsoft Office365 Services (MS Cloud Services)***</B></center>
+<Br><Br>
+Hello All,<Br><br>
+
+Please find below O365 health check report. <Br><br>
+
+Normally there is no action required from you. If we suspect  any issue during health check then O365 teams will inform you in a separate communication according to major/minor functional impact.<Br><br>
+
+If you have any query then please reach out to NWA-O365-L3Global-Operations@sony.com."
+
+
+$trail = "<hr><br><br>Thanks,<Br>Krishn<br><br>"
+            $Body = $app+$Body+$trail
+            Send-MailMessage -SMTPServer $smtpserver -To $recipient -From $sender -BodyAsHtml -Subject "$Subject" `
+            -Body "$Body" -Priority $Importance
